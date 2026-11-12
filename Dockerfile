@@ -1,37 +1,17 @@
 
-# ==========================================
-# STAGE 1: BUILD
-# Maven + JDK 17
-# ==========================================
-
-FROM maven:3.9.9-eclipse-temurin-17 AS build
+FROM maven:3.9.9-eclipse-temurin-17
 
 WORKDIR /app
 
-# Copy Maven configuration
 COPY pom.xml .
-
-# Copy source code
 COPY src ./src
 
-# Download dependencies
-RUN mvn dependency:go-offline -B
+# Copy webpage folder only if it exists
+COPY webpage ./webpage
 
-# Run JUnit tests and create JAR file
-RUN mvn clean package
+RUN apt-get update && apt-get install -y chromium \
+    && rm -rf /var/lib/apt/lists/*
 
+ENV CHROME_BIN=/usr/bin/chromium
 
-# ==========================================
-# STAGE 2: RUNTIME
-# JDK 17
-# ==========================================
-
-FROM eclipse-temurin:17-jre
-
-WORKDIR /app
-
-# Copy generated JAR from build stage
-COPY --from=build /app/target/jarfile-1.0-SNAPSHOT.jar app.jar
-
-# Execute Calculator JAR
-CMD ["java", "-jar", "app.jar"]
+CMD ["mvn", "clean", "test"]
